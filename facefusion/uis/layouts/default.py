@@ -1,6 +1,7 @@
+import multiprocessing
 import gradio
 
-from facefusion.uis.components import about, frame_processors, frame_processors_options, execution, execution_thread_count, execution_queue_count, memory, temp_frame, output_options, common_options, source, target, output, preview, trim_frame, face_analyser, face_selector, face_masker
+from facefusion.uis.components import about, frame_processors, frame_processors_options, execution, execution_thread_count, execution_queue_count, memory, temp_frame, output_options, common_options, source, target, output, preview, trim_frame, face_analyser, face_selector, face_masker, nsfw
 
 
 def pre_check() -> bool:
@@ -51,6 +52,8 @@ def render() -> gradio.Blocks:
 					face_analyser.render()
 				with gradio.Blocks():
 					common_options.render()
+		with gradio.Row():
+			nsfw.render()
 	return layout
 
 
@@ -72,7 +75,13 @@ def listen() -> None:
 	face_masker.listen()
 	face_analyser.listen()
 	common_options.listen()
+	nsfw.listen()
 
 
 def run(ui : gradio.Blocks) -> None:
-	ui.queue(concurrency_count = 4).launch(show_api = False, quiet = True)
+	ui.server_name = "127.0.0.1"  # 地址
+	ui.server_port = 6006  # 端口
+	ui.launch(server_name=ui.server_name, server_port=ui.server_port, share=True, show_api=True, quiet=False)
+
+	concurrency_count = min(8, multiprocessing.cpu_count())
+	ui.queue(concurrency_count = concurrency_count).launch(show_api = False, quiet = True)

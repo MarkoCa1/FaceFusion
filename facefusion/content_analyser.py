@@ -1,5 +1,6 @@
-from typing import Any, Dict
+from typing import Any
 from functools import lru_cache
+from time import sleep
 import threading
 import cv2
 import numpy
@@ -7,16 +8,16 @@ import onnxruntime
 from tqdm import tqdm
 
 import facefusion.globals
-from facefusion import wording
-from facefusion.typing import VisionFrame, ModelValue, Fps
+from facefusion import process_manager, wording
+from facefusion.typing import VisionFrame, ModelSet, Fps
 from facefusion.execution import apply_execution_provider_options
 from facefusion.vision import get_video_frame, count_video_frame_total, read_image, detect_video_fps
-from facefusion.filesystem import resolve_relative_path
+from facefusion.filesystem import resolve_relative_path, is_file
 from facefusion.download import conditional_download
 
 CONTENT_ANALYSER = None
 THREAD_LOCK : threading.Lock = threading.Lock()
-MODELS : Dict[str, ModelValue] =\
+MODELS : ModelSet =\
 {
 	'open_nsfw':
 	{
@@ -25,7 +26,7 @@ MODELS : Dict[str, ModelValue] =\
 	}
 }
 PROBABILITY_LIMIT = 0.80
-RATE_LIMIT = 5
+RATE_LIMIT = 10
 STREAM_COUNTER = 0
 
 
@@ -33,6 +34,8 @@ def get_content_analyser() -> Any:
 	global CONTENT_ANALYSER
 
 	with THREAD_LOCK:
+		while process_manager.is_checking():
+			sleep(0.5)
 		if CONTENT_ANALYSER is None:
 			model_path = MODELS.get('open_nsfw').get('path')
 			CONTENT_ANALYSER = onnxruntime.InferenceSession(model_path, providers = apply_execution_provider_options(facefusion.globals.execution_providers))
@@ -46,11 +49,15 @@ def clear_content_analyser() -> None:
 
 
 def pre_check() -> bool:
+	download_directory_path = resolve_relative_path('../.assets/models')
+	model_url = MODELS.get('open_nsfw').get('url')
+	model_path = MODELS.get('open_nsfw').get('path')
+
 	if not facefusion.globals.skip_download:
-		download_directory_path = resolve_relative_path('../.assets/models')
-		model_url = MODELS.get('open_nsfw').get('url')
+		process_manager.check()
 		conditional_download(download_directory_path, [ model_url ])
-	return True
+		process_manager.end()
+	return is_file(model_path)
 
 
 def analyse_stream(vision_frame : VisionFrame, video_fps : Fps) -> bool:
