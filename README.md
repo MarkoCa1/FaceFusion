@@ -1,6 +1,4 @@
-原版：https://github.com/facefusion/facefusion	
-
-中文版：https://github.com/Ccj0221/facefusion_Zh
+原作：https://github.com/facefusion/facefusion	
 
 <br>
 
