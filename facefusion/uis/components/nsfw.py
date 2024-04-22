@@ -14,8 +14,8 @@ from facefusion.uis.typing import File
 COMMON_NSFW_FILE: Optional[gradio.File] = None
 COMMON_NSFW_RESULT: Optional[gradio.JSON] = None
 
-VIDEO_WIDTH = None
-VIDEO_HEIGHT = None
+SOURCE_WIDTH = None
+SOURCE_HEIGHT = None
 
 
 def render() -> None:
@@ -53,12 +53,15 @@ def classify_image(pil_image):
 
 
 def nsfw_image(file):
+	global SOURCE_WIDTH
+	global SOURCE_HEIGHT
 	# 检测图片中是否存在NSFW内容
 	try:
 		with Image.open(file.name) as image:
 			# 对图片进行分类处理
 			results = classify_image(image)
 
+			SOURCE_WIDTH,SOURCE_HEIGHT = image.size
 			# 根据分类结果判断是否为NSFW
 			for result in results:
 				if result['label'] == 'nsfw' and result['score'] > score_threshold:
@@ -68,7 +71,7 @@ def nsfw_image(file):
 	except Exception as e:
 		return {"code": 500, "msg": str(e)}
 
-	return {"code": 200, "msg": ""}
+	return {"code": 200, "msg": "", "data": {"width": SOURCE_WIDTH, "height": SOURCE_HEIGHT, "is_image": True, "is_video": False}}
 
 
 def nsfw_video(file):
@@ -84,15 +87,15 @@ def nsfw_video(file):
 				return {"code": 201, "msg": "检测到既定人脸"}
 	except Exception as e:
 		return {"code": 500, "msg": str(e)}
-	return {"code": 200, "msg": "", "data": {"width": VIDEO_WIDTH, "height": VIDEO_HEIGHT}}
+	return {"code": 200, "msg": "", "data": {"width": SOURCE_WIDTH, "height": SOURCE_HEIGHT, "is_image": False, "is_video": True}}
 
 def frame_generator(video_path):
-	global VIDEO_WIDTH
-	global VIDEO_HEIGHT
+	global SOURCE_WIDTH
+	global SOURCE_HEIGHT
 
 	video = cv2.VideoCapture(video_path)
-	VIDEO_WIDTH = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
-	VIDEO_HEIGHT = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+	SOURCE_WIDTH = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
+	SOURCE_HEIGHT = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
 	# 获取视频的FPS
 	fps = video.get(cv2.CAP_PROP_FPS)
 	# 根据视频的FPS来计算间隔多少帧提取一帧

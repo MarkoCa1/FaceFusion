@@ -1,5 +1,6 @@
 import multiprocessing
 import gradio
+import os
 
 from facefusion.uis.components import about, frame_processors, frame_processors_options, execution, execution_thread_count, execution_queue_count, memory, temp_frame, output_options, common_options, source, target, output, preview, trim_frame, face_analyser, face_selector, face_masker, nsfw
 
@@ -79,6 +80,7 @@ def listen() -> None:
 
 
 def run(ui : gradio.Blocks) -> None:
+	os.environ['GRADIO_TEMP_DIR'] = '/root/autodl-tmp/facefusion-tmp'
 	ui.server_name = "127.0.0.1"  # 地址
 	ui.server_port = 6006  # 端口
 	ui.launch(server_name=ui.server_name, server_port=ui.server_port, share=True, show_api=True, quiet=False)
